@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO2 AI Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+    <h2>CO2 AI Monitor</h2>
+    <div>
+        <a href="index.html">Dashboard</a>
+        <a href="about.html">About</a>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+    <!-- LEFT PANEL -->
+    <div class="left">
+
+        <div class="card">
+            <h3>Live Input</h3>
+
+            <input type="number" id="live_pm" placeholder="PM2.5">
+            <input type="number" id="live_temp" placeholder="Temperature (°C)">
+            <input type="number" id="people" placeholder="People in Room">
+
+            <button onclick="livePredict()">Predict</button>
+            <button onclick="startAutoMode()">Auto Mode</button>
+        </div>
+
+        <div class="card">
+            <h3>Upload Dataset</h3>
+            <input type="file" id="fileInput">
+            <button onclick="processFile()">Run Model</button>
+        </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right">
+
+        <!-- STATS -->
+        <div class="top-cards">
+
+            <div class="stat-card">
+                <h4>CO2 Level</h4>
+                <h1 id="co2">400</h1>
+                <p>ppm</p>
+                <div class="pulse"></div>
+            </div>
+
+            <div class="stat-card">
+                <h4>Condition</h4>
+                <h2 id="condition">--</h2>
+            </div>
+
+            <div class="stat-card">
+                <h4>Ventilation</h4>
+                <h2 id="vent">--</h2>
+            </div>
+
+            <div class="stat-card">
+                <h4>Trend</h4>
+                <h2 id="trend">--</h2>
+            </div>
+
+        </div>
+
+        <!-- GRAPH -->
+        <div class="chart-card">
+            <h3>CO2 Prediction Graph</h3>
+            <canvas id="co2Chart"></canvas>
+        </div>
+
+        <!-- VISUAL SIMULATION -->
+        <div class="visual-section">
+
+            <div class="room">
+                <div id="co2Fill"></div>
+                <p>Room CO2 Level</p>
+            </div>
+
+            <div class="fan-container">
+                <div id="fan" class="fan">🌀</div>
+                <p id="fanStatus">Ventilation OFF</p>
+            </div>
+
+        </div>
+
+        <!-- MODEL STATS -->
+        <div class="card">
+            <h3>Model Stats</h3>
+            <p>Accuracy: 94.2%</p>
+            <p id="usage">Usage Count: 0</p>
+        </div>
+
+    </div>
+
+</div>
+
+<footer>
+    Hybrid IoT-LSTM CO2 Monitoring System
+</footer>
+
+<script src="script.js"></script>
+
+</body>
+</html>
