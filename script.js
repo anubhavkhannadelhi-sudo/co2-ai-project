@@ -4,48 +4,44 @@ let actualData = [];
 let predictedData = [];
 let autoMode = false;
 
-// CO2 estimation fallback
+// ✅ YOUR LIVE BACKEND URL
+const BACKEND_URL = "https://co2-ai-project-3v0r.onrender.com/predict";
+
+// ======================
+// CO2 ESTIMATION (fallback)
+// ======================
 function estimateCO2(pm, temp, people){
     return 400 + (pm * 2) + (temp * 3) + (people * 20);
 }
 
-// Condition
+// ======================
+// STATUS LOGIC
+// ======================
 function getCondition(co2){
     if(co2 < 600) return "Safe";
     if(co2 < 1000) return "Warning";
     return "Critical";
 }
 
-// Ventilation
 function getVent(co2){
     return co2 > 800 ? "ON" : "OFF";
 }
 
 // ======================
-// 🔍 SMART COLUMN DETECTION
+// COLUMN DETECTION
 // ======================
 function detectColumns(headers){
+    let map = { pm:-1, temp:-1, co2:-1 };
 
-    let mapping = {
-        pm: -1,
-        temp: -1,
-        co2: -1
-    };
+    headers.forEach((h,i)=>{
+        let name = h.toLowerCase();
 
-    headers.forEach((col, i)=>{
-        let name = col.toLowerCase().trim();
-
-        if(name.includes("pm2.5") || name.includes("pm25") || name.includes("pm"))
-            mapping.pm = i;
-
-        if(name.includes("temp") || name.includes("temperature"))
-            mapping.temp = i;
-
-        if(name.includes("co2"))
-            mapping.co2 = i;
+        if(name.includes("pm")) map.pm = i;
+        if(name.includes("temp")) map.temp = i;
+        if(name.includes("co2")) map.co2 = i;
     });
 
-    return mapping;
+    return map;
 }
 
 // ======================
@@ -53,16 +49,21 @@ function detectColumns(headers){
 // ======================
 async function predictSingle(pm, temp, people){
     try{
-        const res = await fetch("http://127.0.0.1:5000/predict",{
+        const res = await fetch(BACKEND_URL,{
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({pm25: pm, temp: temp, people: people})
+            body: JSON.stringify({
+                pm25: pm,
+                temp: temp,
+                people: people
+            })
         });
 
         return await res.json();
 
-    }catch{
-        alert("Backend not running!");
+    }catch(err){
+        alert("Backend not reachable!");
+        console.error(err);
         return null;
     }
 }
@@ -77,21 +78,25 @@ async function livePredict(){
     let people = parseInt(document.getElementById("people").value) || 1;
 
     if(isNaN(pm) || isNaN(temp)){
-        alert("Enter valid values!");
+        alert("Enter valid inputs!");
         return;
     }
+
+    usageCount++;
+    document.getElementById("usage").innerText =
+        "Usage Count: " + usageCount;
 
     let result = await predictSingle(pm,temp,people);
     if(!result) return;
 
-    updateSystem(
-        estimateCO2(pm,temp,people),
-        result.co2
-    );
+    let pred = result.co2;
+    let actual = estimateCO2(pm,temp,people);
+
+    updateSystem(actual, pred);
 }
 
 // ======================
-// 🔥 DATASET (FULLY FLEXIBLE)
+// DATASET PROCESSING
 // ======================
 async function processFile(){
 
@@ -105,8 +110,8 @@ async function processFile(){
     reader.onload = async function(e){
 
         let lines = e.target.result.split("\n");
-
         let headers = lines[0].split(",");
+
         let map = detectColumns(headers);
 
         if(map.pm === -1 && map.co2 === -1){
@@ -121,15 +126,14 @@ async function processFile(){
 
             let cols = lines[i].split(",");
 
-            let pm = map.pm !== -1 ? parseFloat(cols[map.pm]) : null;
+            let pm = map.pm !== -1 ? parseFloat(cols[map.pm]) : 50;
             let temp = map.temp !== -1 ? parseFloat(cols[map.temp]) : 25;
             let co2_actual = map.co2 !== -1 ? parseFloat(cols[map.co2]) : null;
 
             if(map.co2 !== -1){
-                // If dataset already has CO2 → use it
                 actualData.push(co2_actual);
 
-                let result = await predictSingle(pm || 50, temp, people);
+                let result = await predictSingle(pm,temp,people);
                 if(!result) return;
 
                 predictedData.push(result.co2);
@@ -154,7 +158,7 @@ async function processFile(){
 }
 
 // ======================
-// COMMON UPDATE
+// SYSTEM UPDATE
 // ======================
 function updateSystem(actual, predicted){
     actualData.push(actual);
@@ -166,7 +170,7 @@ function updateSystem(actual, predicted){
 }
 
 // ======================
-// UI
+// UI UPDATE
 // ======================
 function updateUI(co2){
 
@@ -215,7 +219,7 @@ function drawGraph(){
 }
 
 // ======================
-// VISUALS
+// VISUAL SIMULATION
 // ======================
 function updateVisuals(co2){
 
