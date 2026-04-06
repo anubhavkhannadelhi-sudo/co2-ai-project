@@ -1,65 +1,76 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import numpy as np
-from tensorflow.keras.models import load_model
-from sklearn.preprocessing import MinMaxScaler
 
-# Initialize app
+# =========================
+# APP INITIALIZATION
+# =========================
 app = Flask(__name__)
-CORS(app)  # 🔥 IMPORTANT FIX
+CORS(app)  # Allow frontend access
 
-# Load model
-model = load_model("model.h5", compile=False)
-
-# Scaler
-scaler = MinMaxScaler()
-
-# CO2 estimation function
-def estimate_co2(pm25, temp, people):
-    return 400 + (pm25 * 2) + (temp * 3) + (people * 20)
-
-# Root route (optional but removes 404 confusion)
-@app.route("/")
+# =========================
+# HEALTH CHECK ROUTE
+# =========================
+@app.route('/')
 def home():
     return "CO2 AI Backend Running 🚀"
 
-# Prediction route
-@app.route("/predict", methods=["POST"])
+# =========================
+# CO2 CALCULATION FUNCTION
+# =========================
+def calculate_co2(pm25, temp, people):
+    """
+    Lightweight CO2 estimation function
+    Replaces ML inference for deployment stability
+    """
+    base_co2 = 400  # baseline ppm
+    co2 = base_co2 + (pm25 * 2) + (temp * 3) + (people * 20)
+    return round(co2, 2)
+
+# =========================
+# PREDICTION ROUTE
+# =========================
+@app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.json
+        # Ensure JSON exists
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
 
-        pm25 = float(data.get("pm25", 0))
-        temp = float(data.get("temp", 0))
-        people = int(data.get("people", 1))
+        data = request.get_json()
 
-        # Create sequence of 24 values
-        sequence = [pm25] * 24
-        seq_array = np.array(sequence).reshape(-1, 1)
+        # Safe extraction with defaults
+        pm25 = float(data.get('pm25', 50))
+        temp = float(data.get('temp', 25))
+        people = int(data.get('people', 1))
 
-        # Normalize
-        scaled = scaler.fit_transform(seq_array)
-        input_seq = scaled.reshape(1, 24, 1)
+        # Compute CO2
+        co2_value = calculate_co2(pm25, temp, people)
 
-        # Predict
-        pred = model.predict(input_seq, verbose=0)
-        pred_pm = scaler.inverse_transform(pred)[0][0]
+        # Condition classification
+        if co2_value < 600:
+            condition = "Safe"
+        elif co2_value < 1000:
+            condition = "Warning"
+        else:
+            condition = "Critical"
 
-        # Convert to CO2
-        co2 = estimate_co2(pred_pm, temp, people)
+        # Ventilation logic
+        ventilation = "ON" if co2_value > 800 else "OFF"
 
+        # Response
         return jsonify({
-            "predicted_pm25": float(pred_pm),
-            "co2": float(co2),
-            "status": "success"
+            "co2": co2_value,
+            "condition": condition,
+            "ventilation": ventilation
         })
 
     except Exception as e:
         return jsonify({
-            "error": str(e),
-            "status": "failed"
-        })
+            "error": str(e)
+        }), 400
 
-# Run server
+# =========================
+# RUN SERVER (RENDER SAFE)
+# =========================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
